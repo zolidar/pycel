@@ -15,5 +15,6 @@ def test_pmt(data, result):
 
 
 def test_pmt_error():
-    assert pmt(0,0,0,0,0) == NUM_ERROR
+    assert pmt(0,0,0) == NUM_ERROR
+    assert pmt(0,0,10000) == NUM_ERROR
 

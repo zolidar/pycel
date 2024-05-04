@@ -15,7 +15,7 @@ def pmt(rate, nper, pv, fv=0, type=0):
         else:
             result = npf.pmt(
                 float(rate), float(nper), float(pv), fv=float(fv), when='begin')
-        if np.isnan(result):
+        if np.isnan(result) or np.isinf(result):
             return NUM_ERROR
         return result
     except (ZeroDivisionError, ValueError):
