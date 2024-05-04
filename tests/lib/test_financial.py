@@ -1,4 +1,5 @@
 import math
+from pycel.excelutil import NUM_ERROR
 import pytest
 from pycel.lib.financial import pmt
 
@@ -11,3 +12,8 @@ from pycel.lib.financial import pmt
 )
 def test_pmt(data, result):
     assert math.isclose(pmt(*data), result, rel_tol=1e-3)
+
+
+def test_pmt_error():
+    assert pmt(0,0,0,0,0) == NUM_ERROR
+
