@@ -29,6 +29,25 @@ from pycel.lib.function_helpers import excel_helper
 
 RE_MULTI_SPACE = re.compile(' +')
 
+@excel_helper(number_params=0)
+def char(number):
+    # Excel reference: https://support.microsoft.com/en-us/office/
+    #   char-function-bbd249c8-b36e-4a91-8017-1c133f9294d8
+    try:
+        # Excel's CHAR handles a wide range, including outside typical 0-255
+        # It also truncates floats, so we cast to int.
+        num = int(number)
+        # Excel CHAR returns #VALUE! for 0
+        if num <= 0:
+            return VALUE_ERROR
+        return chr(num)
+    except (ValueError, OverflowError, TypeError):
+        # chr() raises ValueError for invalid code points
+        # and OverflowError for very large numbers.
+        # int() raises TypeError for None, ValueError for non-numeric strings.
+        # Excel returns #VALUE! for all these cases.
+        return VALUE_ERROR
+
 
 class TextFormat:
     Element = collections.namedtuple('Element', 'position code next_code char')

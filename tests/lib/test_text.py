@@ -24,6 +24,7 @@ from pycel.lib.text import (
     exact,
     find,
     left,
+    char,
     len_,
     lower,
     mid,
@@ -495,3 +496,25 @@ def test_value(param, expected):
 )
 def test_len_(param, expected):
     assert len_(param) == expected
+
+@pytest.mark.parametrize(
+    "number, expected",
+    (
+        (65, "A"),  # Basic ASCII
+        (97, "a"),  # Basic ASCII
+        (10, "\n"),  # Newline character
+        (34, '"'),  # Double quote
+        (39, "'"),  # Single quote
+        (9, "\t"),  # Tab
+        (169, "©"),  # Extended ASCII/Unicode (Copyright)
+        (8364, "€"),  # Euro sign (Unicode)
+        (65.7, "A"),  # Float input (should truncate)
+        ("66", "B"),  # String input (numeric)
+        (-1, VALUE_ERROR),  # Invalid code point (negative)
+        (1114112, VALUE_ERROR),  # Outside valid Unicode range (chr limit)
+        ("ABC", VALUE_ERROR),  # Invalid string input
+        (None, VALUE_ERROR),  # None input
+    ),
+)
+def test_char(number, expected):
+    assert char(number) == expected
