@@ -28,6 +28,7 @@ from pycel.excelutil import (
     NUM_ERROR,
     REF_ERROR,
     VALUE_ERROR,
+    is_array_arg,
 )
 from pycel.lib.function_helpers import (
     excel_helper,
@@ -766,9 +767,40 @@ def small(array, k):
     #   stdev-p-function-6e917c05-31a0-496f-ade7-4f4e7462f285
 
 
-# def stdev.s(value):
-    # Excel reference: https://support.microsoft.com/en-us/office/
-    #   stdev-s-function-7d69cf97-0c1f-4acf-be27-f3e83904cc23
+@excel_helper()
+def stdev_s(*args):
+    # Excel reference: https://support.microsoft.com/en-us/office/stdev-s-function-7d69cf97-0c1f-4acf-be27-f3e83904cc23
+
+    numeric_values = []
+
+    for arg in args:
+        # excel_helper's error_string_wrapper (default for @excel_helper())
+        # handles scalar arguments that are themselves error codes before this function is called.
+        # So, 'arg' here is either a scalar (not an error) or a list/tuple (possibly containing errors).
+
+        if isinstance(arg, (list, tuple)):
+            # If 'arg' is an array, flatten it and process each yielded item.
+            for item_from_flatten in flatten(arg):
+                if item_from_flatten in ERROR_CODES:
+                    return item_from_flatten  # Propagate first error from within array
+
+                # Item is not an error, try to coerce
+                coerced = coerce_to_number(item_from_flatten, convert_all=False)
+                if isinstance(coerced, (int, float)) and not isinstance(coerced, bool):
+                    numeric_values.append(coerced)
+                # Booleans and uncoercible text from flattened array are ignored
+        else:
+            # 'arg' is a scalar (and known not to be an error code due to excel_helper pre-check).
+            # Process it directly.
+            coerced = coerce_to_number(arg, convert_all=False)
+            if isinstance(coerced, (int, float)) and not isinstance(coerced, bool):
+                numeric_values.append(coerced)
+            # Booleans and uncoercible text (scalar args) are ignored
+
+    if not numeric_values or len(numeric_values) < 2:
+        return DIV0
+
+    return np.std(numeric_values, ddof=1)
 
 
 # def stdeva(value):
