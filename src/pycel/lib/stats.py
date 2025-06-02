@@ -773,33 +773,29 @@ def stdev_s(*args):
 
     numeric_values = []
 
-    for arg in args:  # Iterate through top-level arguments
-        if arg in ERROR_CODES:  # Check top-level arg for error FIRST
-            return arg
+    for arg in args:
+        # excel_helper's error_string_wrapper (default for @excel_helper())
+        # handles scalar arguments that are themselves error codes before this function is called.
+        # So, 'arg' here is either a scalar (not an error) or a list/tuple (possibly containing errors).
 
-        # If arg is an array, flatten it and process items
-        # Otherwise, process arg as a single item
-        # The excel_helper decorator might pre-flatten to some extent based on its own logic
-        # for how it passes arguments from Excel ranges. Assuming args can still contain lists/tuples here.
+        if isinstance(arg, (list, tuple)):
+            # If 'arg' is an array, flatten it and process each yielded item.
+            for item_from_flatten in flatten(arg):
+                if item_from_flatten in ERROR_CODES:
+                    return item_from_flatten  # Propagate first error from within array
 
-        items_to_process = []
-        if is_array_arg(arg):
-            items_to_process.extend(list(flatten(arg)))
+                # Item is not an error, try to coerce
+                coerced = coerce_to_number(item_from_flatten, convert_all=False)
+                if isinstance(coerced, (int, float)) and not isinstance(coerced, bool):
+                    numeric_values.append(coerced)
+                # Booleans and uncoercible text from flattened array are ignored
         else:
-            items_to_process.append(arg)
-
-        for item in items_to_process:
-            if (
-                item in ERROR_CODES
-            ):  # Check each item (could be from flatten or a direct arg that wasn't an error itself)
-                return item
-
-            coerced = coerce_to_number(
-                item, convert_all=False
-            )  # convert_all=False to ignore text that isn't a number
+            # 'arg' is a scalar (and known not to be an error code due to excel_helper pre-check).
+            # Process it directly.
+            coerced = coerce_to_number(arg, convert_all=False)
             if isinstance(coerced, (int, float)) and not isinstance(coerced, bool):
                 numeric_values.append(coerced)
-            # Booleans and uncoercible text are ignored
+            # Booleans and uncoercible text (scalar args) are ignored
 
     if not numeric_values or len(numeric_values) < 2:
         return DIV0
