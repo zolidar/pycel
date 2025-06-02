@@ -440,8 +440,18 @@ def test_small(data, k, expected):
         ([[1, 2, 3]], [[2, 2, 2], [3, 3, 3]], None, ((2, 2, 2),)),
     )
 )
+
 def test_trend_shapes(Y, X, new_X, expected):
-    assert_np_close(trend(Y, X, new_X, const=True), expected)
+    expected = tuple(flatten(expected))
+    result = np.array(trend(Y, X, new_X, True)).ravel()
+    assert_np_close(result, expected)
+
+    result = np.array(trend([[x] for x in Y[0]], X, new_X)).ravel()
+    assert_np_close(result, expected)
+
+    if X is not None and new_X is None:
+        result = np.array(trend([[x] for x in Y[0]], np.array(X).transpose(), None)).ravel()
+        assert_np_close(result, expected)
 
 
 # Tests for stdev_s
