@@ -404,6 +404,7 @@ class FunctionNode(ASTNode):
         "round": "round_",
         "sum": "sum_",
         "xor": "xor_",
+        "stdev.s": "stdev_s",
     }
 
     def __init__(self, *args):

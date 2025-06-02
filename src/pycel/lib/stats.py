@@ -28,6 +28,7 @@ from pycel.excelutil import (
     NUM_ERROR,
     REF_ERROR,
     VALUE_ERROR,
+    is_array_arg,
 )
 from pycel.lib.function_helpers import (
     excel_helper,
@@ -766,9 +767,44 @@ def small(array, k):
     #   stdev-p-function-6e917c05-31a0-496f-ade7-4f4e7462f285
 
 
-# def stdev.s(value):
-    # Excel reference: https://support.microsoft.com/en-us/office/
-    #   stdev-s-function-7d69cf97-0c1f-4acf-be27-f3e83904cc23
+@excel_helper()
+def stdev_s(*args):
+    # Excel reference: https://support.microsoft.com/en-us/office/stdev-s-function-7d69cf97-0c1f-4acf-be27-f3e83904cc23
+
+    numeric_values = []
+
+    for arg in args:  # Iterate through top-level arguments
+        if arg in ERROR_CODES:  # Check top-level arg for error FIRST
+            return arg
+
+        # If arg is an array, flatten it and process items
+        # Otherwise, process arg as a single item
+        # The excel_helper decorator might pre-flatten to some extent based on its own logic
+        # for how it passes arguments from Excel ranges. Assuming args can still contain lists/tuples here.
+
+        items_to_process = []
+        if is_array_arg(arg):
+            items_to_process.extend(list(flatten(arg)))
+        else:
+            items_to_process.append(arg)
+
+        for item in items_to_process:
+            if (
+                item in ERROR_CODES
+            ):  # Check each item (could be from flatten or a direct arg that wasn't an error itself)
+                return item
+
+            coerced = coerce_to_number(
+                item, convert_all=False
+            )  # convert_all=False to ignore text that isn't a number
+            if isinstance(coerced, (int, float)) and not isinstance(coerced, bool):
+                numeric_values.append(coerced)
+            # Booleans and uncoercible text are ignored
+
+    if not numeric_values or len(numeric_values) < 2:
+        return DIV0
+
+    return np.std(numeric_values, ddof=1)
 
 
 # def stdeva(value):

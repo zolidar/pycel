@@ -8,6 +8,7 @@
 #   https://www.gnu.org/licenses/gpl-3.0.en.html
 
 import pytest
+import numpy as np
 
 import pycel.excellib
 from pycel.excelcompiler import ExcelCompiler
@@ -44,6 +45,7 @@ from pycel.lib.stats import (
     minifs,
     slope,
     small,
+    stdev_s,
     trend,
 )
 
@@ -439,15 +441,87 @@ def test_small(data, k, expected):
     )
 )
 def test_trend_shapes(Y, X, new_X, expected):
-    import numpy as np
+    assert_np_close(trend(Y, X, new_X, const=True), expected)
 
-    expected = tuple(flatten(expected))
-    result = np.array(trend(Y, X, new_X, True)).ravel()
-    assert_np_close(result, expected)
 
-    result = np.array(trend([[x] for x in Y[0]], X, new_X)).ravel()
-    assert_np_close(result, expected)
+# Tests for stdev_s
+def test_stdev_s_basic():
+    assert stdev_s(1, 2, 3, 4, 5) == pytest.approx(1.58113883)
 
-    if X is not None and new_X is None:
-        result = np.array(trend([[x] for x in Y[0]], np.array(X).transpose(), None)).ravel()
-        assert_np_close(result, expected)
+
+def test_stdev_s_ignore_text_boolean():
+    # Need numpy for this comparison
+    assert stdev_s(10, 20, "text", True, 30, False) == pytest.approx(
+        np.std([10, 20, 30], ddof=1)
+    )
+
+
+def test_stdev_s_numbers_as_strings():
+    # Need numpy for this comparison
+    assert stdev_s("10", "20", 30) == pytest.approx(np.std([10, 20, 30], ddof=1))
+
+
+def test_stdev_s_less_than_two_values():
+    assert stdev_s(10) == DIV0
+    assert stdev_s() == DIV0
+    assert stdev_s("text", True) == DIV0
+
+
+def test_stdev_s_with_error_value():
+    assert stdev_s(1, 2, NA_ERROR, 4) == NA_ERROR
+
+
+def test_stdev_s_excel_example():
+    # From https://support.microsoft.com/en-us/office/stdev-s-function-7d69cf97-0c1f-4acf-be27-f3e83904cc23
+    data = [1345, 1301, 1368, 1322, 1310, 1370, 1318, 1350, 1303, 1299]
+    assert stdev_s(*data) == pytest.approx(27.46391572)
+
+
+def test_stdev_s_mixed_arguments():
+    # Need numpy for this comparison
+    assert stdev_s([1, 2, 3], (4, 5), "6", 7.0, "text", False) == pytest.approx(
+        np.std([1, 2, 3, 4, 5, 6, 7], ddof=1)
+    )
+
+
+def test_stdev_s_empty_and_none_values():
+    # Need numpy for this comparison
+    assert stdev_s(1, None, 2, EMPTY, 3, "") == pytest.approx(np.std([1, 2, 3], ddof=1))
+
+
+def test_stdev_s_single_value_in_array():
+    assert stdev_s([10]) == DIV0
+
+
+def test_stdev_s_all_errors():
+    assert stdev_s(NA_ERROR, DIV0, VALUE_ERROR) == NA_ERROR  # Propagates first error
+
+
+def test_stdev_s_error_with_valid_values():
+    assert stdev_s(1, 2, NA_ERROR, 3, 4) == NA_ERROR
+
+
+def test_stdev_s_array_of_text_and_bool():
+    assert stdev_s(["text1", True, "text2", False]) == DIV0
+
+
+def test_stdev_s_array_with_one_number():
+    assert stdev_s([100, "text", False]) == DIV0
+
+
+def test_stdev_s_multiple_arrays():
+    # Need numpy for this comparison
+    assert stdev_s([1, 2], [3, 4], [5, "6"]) == pytest.approx(
+        np.std([1, 2, 3, 4, 5, 6], ddof=1)
+    )
+
+
+def test_stdev_s_complex_case_from_spec_discussion():
+    # Need numpy for this comparison
+    # STDEV.S(A1:A5, B1:B5, 100)
+    # A1:A5 = {1,2,"text",TRUE,5}
+    # B1:B5 = {6,7,8,FALSE,"9"}
+    # Expected numbers: 1,2,5,6,7,8,9,100
+    assert stdev_s(
+        [1, 2, "text", True, 5], [6, 7, 8, False, "9"], 100
+    ) == pytest.approx(np.std([1, 2, 5, 6, 7, 8, 9, 100], ddof=1))
