@@ -8,6 +8,7 @@
 #   https://www.gnu.org/licenses/gpl-3.0.en.html
 
 import pytest
+import numpy as np
 
 import pycel.lib.logical
 from pycel.excelcompiler import ExcelCompiler
@@ -94,6 +95,12 @@ def test_and_(expected, test_value):
         (NUM_ERROR, 2, 2),
         (NA_ERROR, 2, 2),
         (NA_ERROR, None, 0),
+        (float("inf"), "ErrorVal", float("inf")),
+        (float("-inf"), "ErrorVal", float("-inf")),
+        (float("inf"), 0, float("inf")),
+        (np.inf, "ErrorVal", np.inf),
+        (np.NINF, "ErrorVal", np.NINF),
+        (np.inf, None, np.inf),
         (((1, VALUE_ERROR), (VALUE_ERROR, 1)), 2, ((1, 2), (2, 1))),
         (((1, VALUE_ERROR), (VALUE_ERROR, 1)), None, ((1, 0), (0, 1))),
     )

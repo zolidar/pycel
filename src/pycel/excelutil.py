@@ -1210,6 +1210,8 @@ def build_operator_operand_fixup(capture_error_state):
             String to Number coercion
             String / Number multiplication
         """
+        orig_left_op, orig_right_op = left_op, right_op  # Store original operands
+
         left_list, right_list = list_like(left_op), list_like(right_op)
         if not left_list and left_op in ERROR_CODES:
             return left_op
@@ -1256,22 +1258,48 @@ def build_operator_operand_fixup(capture_error_state):
             left_op = coerce_to_number(left_op, convert_all=True)
             right_op = coerce_to_number(right_op, convert_all=True)
 
-            if not (is_number(left_op) and is_number(right_op) or
-                    is_address(left_op) and is_address(right_op)):
-                if op != 'USub':
-                    capture_error_state(True, f'Values: {left_op} {op} {right_op}')
+            if not (
+                is_number(left_op)
+                and is_number(right_op)
+                or is_address(left_op)
+                and is_address(right_op)
+            ):
+                if op != "USub":
+                    if callable(capture_error_state):  # Simplified check
+                        capture_error_state(
+                            True, f"Values: {orig_left_op} {op} {orig_right_op}"
+                        )  # Use original ops
                     return VALUE_ERROR
 
         try:
             if op == 'USub':
                 return PYTHON_AST_OPERATORS[op](right_op)
             else:
-                return PYTHON_AST_OPERATORS[op](left_op, right_op)
-        except ZeroDivisionError:
-            capture_error_state(True, f'Values: {left_op} {op} {right_op}')
+                result = PYTHON_AST_OPERATORS[op](left_op, right_op)
+                # Check for float division by zero resulting in infinity
+                if (
+                    op == "Div"
+                    and isinstance(result, (float, np.floating))
+                    and np.isinf(result)
+                ):
+                    if callable(capture_error_state):  # Simplified check
+                        capture_error_state(
+                            True,
+                            f"Values: {orig_left_op} {op} {orig_right_op}",  # Use original ops
+                        )
+                    return DIV0  # Convert inf to '#DIV/0!'
+                return result
+        except ZeroDivisionError:  # Catches integer division by zero
+            if callable(capture_error_state):  # Simplified check
+                capture_error_state(
+                    True, f"Values: {orig_left_op} {op} {orig_right_op}"
+                )  # Use original ops
             return DIV0
         except TypeError:
-            capture_error_state(True, f'Values: {left_op} {op} {right_op}')
+            if callable(capture_error_state):  # Simplified check
+                capture_error_state(
+                    True, f"Values: {orig_left_op} {op} {orig_right_op}"
+                )  # Use original ops
             return VALUE_ERROR
 
     return fixup
