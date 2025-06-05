@@ -13,6 +13,7 @@ import threading
 from collections import namedtuple
 
 import pytest
+import numpy as np  # Added for numpy float types in new tests
 from openpyxl.utils import quote_sheetname
 
 from pycel.excelutil import (
@@ -1271,6 +1272,24 @@ def test_excel_cmp(lval, op, rval, expected):
         ('X', 'Pow', 'X', VALUE_ERROR),
         (True, 'Pow', 'X', VALUE_ERROR),
         (None, 'Pow', 'X', VALUE_ERROR),
+        
+        (1.0, "Div", 0.0, DIV0),
+        (-1.0, "Div", 0.0, DIV0),
+        (1.0, "Div", -0.0, DIV0),  # Division by negative zero
+        (-1.0, "Div", -0.0, DIV0),
+        (np.float64(1.0), "Div", np.float64(0.0), DIV0),
+        (np.float32(5.0), "Div", np.float32(0.0), DIV0),
+        (0.0, "Div", 0.0, DIV0),  # 0.0 / 0.0 should also be DIV0
+        # Ensure integer division by zero still works as expected (already covered but good for explicitness here)
+        (1, "Div", 0, DIV0),
+        # Test with string numbers that coerce to float then divide by zero
+        ("1.0", "Div", "0.0", DIV0),
+        ("1.0", "Div", 0.0, DIV0),
+        (1.0, "Div", "0.0", DIV0),
+        # Non-error cases to ensure no over-correction with float division
+        (10.0, "Div", 2.0, 5.0),
+        (np.float64(10.0), "Div", np.float64(2.0), np.float64(5.0)),
+        ("10.0", "Div", "2.0", 5.0),
 
         # mixed errors
         (VALUE_ERROR, 'Add', DIV0, VALUE_ERROR),
@@ -1302,17 +1321,16 @@ def test_excel_operator_operand_fixup(left_op, op, right_op, expected):
     def capture_error_state(is_exception, msg):
         error_messages.append((is_exception, msg))
 
-    assert expected == build_operator_operand_fixup(
-        capture_error_state)(left_op, op, right_op)
+    assert expected == build_operator_operand_fixup(capture_error_state)(
+        left_op, op, right_op
+    )
 
     if expected == VALUE_ERROR:
         if expected == VALUE_ERROR and VALUE_ERROR not in (left_op, right_op):
-            assert [(True, 'Values: {} {} {}'.format(
-                coerce_to_number(left_op, convert_all=True), op, right_op))
-            ] == error_messages
+            assert [(True, f"Values: {left_op} {op} {right_op}")] == error_messages
 
     elif expected == DIV0 and DIV0 not in (left_op, right_op):
-        assert [(True, f'Values: {left_op} {op} {right_op}')] == error_messages
+        assert [(True, f"Values: {left_op} {op} {right_op}")] == error_messages
 
 
 def test_iterative_eval_tracker():

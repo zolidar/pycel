@@ -14,7 +14,6 @@ import itertools as it
 from numbers import Number
 
 import numpy as np
-import math  # Added for math.isinf, though np.isinf is generally preferred for broad compatibility
 
 from pycel.excelutil import (
     ERROR_CODES,
@@ -98,20 +97,7 @@ def iferror(arg, value_if_error):
     #   IFERROR-function-C526FD07-CAEB-47B8-8BB6-63F3E417F611
     if in_array_formula_context and has_array_arg(arg, value_if_error):
         return cse_array_wrapper(iferror, (0, 1))(arg, value_if_error)
-
-    # Check for standard error codes
-    is_standard_error = arg in ERROR_CODES
-
-    # Check for infinity (handles Python floats and numpy floats robustly)
-    is_infinity = False
-    if isinstance(
-        arg, (float, np.floating)
-    ):  # Check if it's a float type that np.isinf can handle
-        is_infinity = np.isinf(arg)
-
-    # If it's a standard error string or infinity, or an array argument (which might contain errors/inf)
-    if is_standard_error or is_infinity or is_array_arg(arg):
-        # Excel returns 0 if value_if_error is an empty cell (represented as None by pycel for some inputs)
+    elif arg in ERROR_CODES or is_array_arg(arg):
         return 0 if value_if_error is None else value_if_error
     else:
         return arg
