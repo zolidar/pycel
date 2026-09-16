@@ -278,7 +278,7 @@ def round_(number, num_digits=0):
 
     num_digits = int(num_digits)
     if num_digits >= 0:  # round to the right side of the point
-        return float(Decimal(repr(number)).quantize(
+        return float(_decimal(number).quantize(
             Decimal(repr(pow(10, -num_digits))),
             rounding=ROUND_HALF_UP
         ))
@@ -289,10 +289,20 @@ def round_(number, num_digits=0):
         return round(number, num_digits)
 
 
+def _decimal(number):
+    # numpy 2 reprs a scalar as 'np.float64(...)', which Decimal cannot parse.
+    # A longdouble's item() is itself, so it is taken at Excel's double precision.
+    if isinstance(number, np.generic):
+        number = number.item()
+        if isinstance(number, np.generic):
+            number = float(number)
+    return Decimal(repr(number))
+
+
 def _round(number, num_digits, rounding):
     num_digits = int(num_digits)
     quant = Decimal(f'1E{"+-"[num_digits >= 0]}{abs(num_digits)}')
-    return float(Decimal(repr(number)).quantize(quant, rounding=rounding))
+    return float(_decimal(number).quantize(quant, rounding=rounding))
 
 
 @excel_math_func
