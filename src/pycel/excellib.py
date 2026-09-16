@@ -290,9 +290,12 @@ def round_(number, num_digits=0):
 
 
 def _decimal(number):
-    # numpy 2 reprs a scalar as 'np.float64(...)', which Decimal cannot parse
+    # numpy 2 reprs a scalar as 'np.float64(...)', which Decimal cannot parse.
+    # A longdouble's item() is itself, so it is taken at Excel's double precision.
     if isinstance(number, np.generic):
         number = number.item()
+        if isinstance(number, np.generic):
+            number = float(number)
     return Decimal(repr(number))
 
 

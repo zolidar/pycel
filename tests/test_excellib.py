@@ -589,11 +589,15 @@ def test_round_2(number, digits, result):
 
 
 @pytest.mark.parametrize('func', (round_, roundup, rounddown))
-@pytest.mark.parametrize(
-    'number', (np.float64(2.675), np.float32(-1.5), np.int64(7)))
+@pytest.mark.parametrize('number, native', (
+    (np.float64(2.675), 2.675),
+    (np.float32(-1.5), -1.5),
+    (np.int64(7), 7),
+    (np.longdouble(2.675), 2.675),
+))
 @pytest.mark.parametrize('digits', (0, 2))
-def test_round_numpy_scalar(func, number, digits):
-    assert func(number.item(), digits) == func(number, digits)
+def test_round_numpy_scalar(func, number, native, digits):
+    assert func(native, digits) == func(number, digits)
 
 
 def test_sum_():
