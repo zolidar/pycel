@@ -9,6 +9,7 @@
 
 import math
 
+import numpy as np
 import pytest
 
 import pycel.excellib
@@ -585,6 +586,14 @@ def test_round_(result, digits):
 )
 def test_round_2(number, digits, result):
     assert result == round_(number, digits)
+
+
+@pytest.mark.parametrize('func', (round_, roundup, rounddown))
+@pytest.mark.parametrize(
+    'number', (np.float64(2.675), np.float32(-1.5), np.int64(7)))
+@pytest.mark.parametrize('digits', (0, 2))
+def test_round_numpy_scalar(func, number, digits):
+    assert func(number.item(), digits) == func(number, digits)
 
 
 def test_sum_():
